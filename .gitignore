@@ -1,0 +1,11 @@
+*.pyc
+.settings
+.project
+.pydevproject
+.idea
+*.pot
+*.mo
+.babelcompiled
+more.babel_i18n.egg-info/
+.cache/
+.eggs/
