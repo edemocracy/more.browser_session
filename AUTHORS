@@ -1,0 +1,7 @@
+morepath adaption by Tobias dpausp
+
+Parts of the project are taken from Flask. 
+Flask is written and maintained by Armin Ronacher and
+various contributors. See the Flask project for details:
+
+https://github.com/pallets/flask
