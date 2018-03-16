@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-    flask.sessions
-    ~~~~~~~~~~~~~~
+    more.browsersession.sessions
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Implements cookie based sessions based on itsdangerous.
 
+    :copyright: (c) 2018 by Tobias dpausp
     :copyright: (c) 2015 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
 import hashlib
+import socket
 import warnings
 from collections import MutableMapping
 from datetime import datetime
@@ -16,8 +18,36 @@ from datetime import datetime
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from werkzeug.datastructures import CallbackDict
 
-from flask.helpers import is_ip, total_seconds
-from flask.json.tag import TaggedJSONSerializer
+
+def total_seconds(td):
+    """Returns the total seconds from a timedelta object.
+
+    :param timedelta td: the timedelta to be converted in seconds
+
+    :returns: number of seconds
+    :rtype: int
+    """
+    return td.days * 60 * 60 * 24 + td.seconds
+
+
+def is_ip(value):
+    """Determine if the given string is an IP address.
+
+    :param value: value to check
+    :type value: str
+
+    :return: True if string is an IP address
+    :rtype: bool
+    """
+    for family in (socket.AF_INET, socket.AF_INET6):
+        try:
+            socket.inet_pton(family, value)
+        except socket.error:
+            pass
+        else:
+            return True
+
+    return False
 
 
 class SessionMixin(MutableMapping):
@@ -291,9 +321,6 @@ class SessionInterface(object):
         raise NotImplementedError()
 
 
-session_json_serializer = TaggedJSONSerializer()
-
-
 class SecureCookieSessionInterface(SessionInterface):
     """The default session interface that stores sessions in signed cookies
     through the :mod:`itsdangerous` module.
@@ -309,7 +336,6 @@ class SecureCookieSessionInterface(SessionInterface):
     #: A python serializer for the payload.  The default is a compact
     #: JSON derived serializer with support for some extra Python types
     #: such as datetime objects or tuples.
-    serializer = session_json_serializer
     session_class = SecureCookieSession
 
     def get_signing_serializer(self, app):
@@ -319,9 +345,7 @@ class SecureCookieSessionInterface(SessionInterface):
             key_derivation=self.key_derivation,
             digest_method=self.digest_method
         )
-        return URLSafeTimedSerializer(app.secret_key, salt=self.salt,
-                                      serializer=self.serializer,
-                                      signer_kwargs=signer_kwargs)
+        return URLSafeTimedSerializer(app.secret_key, salt=self.salt, signer_kwargs=signer_kwargs)
 
     def open_session(self, app, request):
         s = self.get_signing_serializer(app)
