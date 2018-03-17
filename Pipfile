@@ -15,6 +15,7 @@ werkzeug = "*"
 
 [dev-packages]
 
+pylint = "*"
 
 
 [requires]
