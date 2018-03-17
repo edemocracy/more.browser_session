@@ -9,6 +9,8 @@ name = "pypi"
 
 pynacl = "*"
 morepath = "*"
+itsdangerous = "*"
+werkzeug = "*"
 
 
 [dev-packages]

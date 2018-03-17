@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "44b55757c88658f6b450161c3969362c03e4b1cf9a46c900717b8a6c8a52a769"
+            "sha256": "9558547de021bb600aa983238c4175b59feac748d538465375cf3d81527d97c1"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -60,6 +60,12 @@
                 "sha256:5c003afe8d7f48d684bc9f66e8109952234812b225be324ce572ce4278b18f10"
             ],
             "version": "==0.1"
+        },
+        "itsdangerous": {
+            "hashes": [
+                "sha256:cbb3fcf8d3e33df861709ecaf89d9e6629cff0a217bc2848f1b41cd30d360519"
+            ],
+            "version": "==0.24"
         },
         "morepath": {
             "hashes": [
@@ -129,6 +135,13 @@
                 "sha256:8d10af182fda4b92193113ee1edeb687ab9dc44336b37d6804e413f0240d40d9"
             ],
             "version": "==1.7.4"
+        },
+        "werkzeug": {
+            "hashes": [
+                "sha256:c3fd7a7d41976d9f44db327260e263132466836cef6f91512889ed60ad26557c",
+                "sha256:d5da73735293558eb1651ee2fddc4d0dedcfa06538b8813a2e20011583c9e49b"
+            ],
+            "version": "==0.14.1"
         }
     },
     "develop": {}
