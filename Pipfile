@@ -16,6 +16,9 @@ werkzeug = "*"
 [dev-packages]
 
 pylint = "*"
+pytest = "*"
+ipdb = "*"
+webtest = "*"
 
 
 [requires]
