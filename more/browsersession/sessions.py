@@ -4,6 +4,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Implements cookie based sessions based on itsdangerous.
+    Based on the sessions flask.sessions module.
 
     :copyright: (c) 2018 by Tobias dpausp
     :copyright: (c) 2015 by Armin Ronacher.
@@ -17,17 +18,6 @@ from datetime import datetime
 
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from werkzeug.datastructures import CallbackDict
-
-
-def total_seconds(td):
-    """Returns the total seconds from a timedelta object.
-
-    :param timedelta td: the timedelta to be converted in seconds
-
-    :returns: number of seconds
-    :rtype: int
-    """
-    return td.days * 60 * 60 * 24 + td.seconds
 
 
 def is_ip(value):
@@ -208,19 +198,16 @@ class SessionInterface(object):
         Once detected (or if not set at all), ``SESSION_COOKIE_DOMAIN`` is
         updated to avoid re-running the logic.
         """
-
-        rv = app.config['SESSION_COOKIE_DOMAIN']
+        rv = app.settings.browsersession.cookie_domain
 
         # set explicitly, or cached from SERVER_NAME detection
         # if False, return None
         if rv is not None:
             return rv if rv else None
 
-        rv = app.config['SERVER_NAME']
-
-        # server name not set, cache False to return none next time
-        if not rv:
-            app.config['SESSION_COOKIE_DOMAIN'] = False
+        try:
+            rv = app.settings.app.server_name
+        except AttributeError:
             return None
 
         # chop off the port which is usually not supported by browsers
@@ -236,7 +223,6 @@ class SessionInterface(object):
                 ' Add an entry to your hosts file, for example'
                 ' "{rv}.localdomain", and use that instead.'.format(rv=rv)
             )
-            app.config['SESSION_COOKIE_DOMAIN'] = False
             return None
 
         ip = is_ip(rv)
@@ -254,7 +240,6 @@ class SessionInterface(object):
         if self.get_cookie_path(app) == '/' and not ip:
             rv = '.' + rv
 
-        app.config['SESSION_COOKIE_DOMAIN'] = rv
         return rv
 
     def get_cookie_path(self, app):
@@ -263,21 +248,20 @@ class SessionInterface(object):
         config var if it's set, and falls back to ``APPLICATION_ROOT`` or
         uses ``/`` if it's ``None``.
         """
-        return app.config['SESSION_COOKIE_PATH'] \
-               or app.config['APPLICATION_ROOT']
+        return app.settings.browsersession.cookie_path or app.settings.app.root
 
     def get_cookie_httponly(self, app):
         """Returns True if the session cookie should be httponly.  This
         currently just returns the value of the ``SESSION_COOKIE_HTTPONLY``
         config var.
         """
-        return app.config['SESSION_COOKIE_HTTPONLY']
+        return app.settings.browsersession.cookie_httponly
 
     def get_cookie_secure(self, app):
         """Returns True if the cookie should be secure.  This currently
         just returns the value of the ``SESSION_COOKIE_SECURE`` setting.
         """
-        return app.config['SESSION_COOKIE_SECURE']
+        return app.settings.browsersession.cookie_secure
 
     def get_expiration_time(self, app, session):
         """A helper method that returns an expiration date for the session
@@ -286,7 +270,7 @@ class SessionInterface(object):
         lifetime configured on the application.
         """
         if session.permanent:
-            return datetime.utcnow() + app.permanent_session_lifetime
+            return datetime.utcnow() + app.settings.browsersession.permanent_lifetime
 
     def should_set_cookie(self, app, session):
         """Used by session backends to determine if a ``Set-Cookie`` header
@@ -301,7 +285,7 @@ class SessionInterface(object):
         """
 
         return session.modified or (
-            session.permanent and app.config['SESSION_REFRESH_EACH_REQUEST']
+            session.permanent and app.settings.browsersession.refresh_each_request
         )
 
     def open_session(self, app, request):
@@ -338,23 +322,28 @@ class SecureCookieSessionInterface(SessionInterface):
     #: such as datetime objects or tuples.
     session_class = SecureCookieSession
 
+    
+    def secret_key(self, app):
+        try:
+            return app.settings.browsersession.secret_key
+        except AttributeError:
+            raise Exception('no secret key set (browsersettings.secret_key), cannot use secure sessions!')
+
     def get_signing_serializer(self, app):
-        if not app.secret_key:
-            return None
         signer_kwargs = dict(
             key_derivation=self.key_derivation,
             digest_method=self.digest_method
         )
-        return URLSafeTimedSerializer(app.secret_key, salt=self.salt, signer_kwargs=signer_kwargs)
+        return URLSafeTimedSerializer(self.secret_key(app), salt=self.salt, signer_kwargs=signer_kwargs)
 
     def open_session(self, app, request):
         s = self.get_signing_serializer(app)
         if s is None:
             return None
-        val = request.cookies.get(app.session_cookie_name)
+        val = request.cookies.get(app.settings.browsersession.cookie_name)
         if not val:
             return self.session_class()
-        max_age = total_seconds(app.permanent_session_lifetime)
+        max_age = app.settings.browsersession.permanent_lifetime
         try:
             data = s.loads(val, max_age=max_age)
             return self.session_class(data)
@@ -370,7 +359,7 @@ class SecureCookieSessionInterface(SessionInterface):
         if not session:
             if session.modified:
                 response.delete_cookie(
-                    app.session_cookie_name,
+                    app.settings.browsersession.cookie_domain,
                     domain=domain,
                     path=path
                 )
@@ -379,7 +368,7 @@ class SecureCookieSessionInterface(SessionInterface):
 
         # Add a "Vary: Cookie" header if the session was accessed at all.
         if session.accessed:
-            response.vary.add('Cookie')
+            response.vary = ['Cookie']
 
         if not self.should_set_cookie(app, session):
             return
@@ -389,11 +378,11 @@ class SecureCookieSessionInterface(SessionInterface):
         expires = self.get_expiration_time(app, session)
         val = self.get_signing_serializer(app).dumps(dict(session))
         response.set_cookie(
-            app.session_cookie_name,
+            app.settings.browsersession.cookie_name,
             val,
-            expires=expires,
-            httponly=httponly,
-            domain=domain,
             path=path,
-            secure=secure
+            domain=domain,
+            secure=secure,
+            httponly=httponly,
+            expires=expires
         )
