@@ -21,6 +21,23 @@ def test_app_class():
         def test_request(self):
             return webob.request.BaseRequest.blank('/')
 
+    @TestApp.path('/sessionadd')
+    class SessionAdd:
+        pass
+
+    @TestApp.view(SessionAdd)
+    def session_add(_self, request):
+        request.browsersession['test'] = 'value'
+
+    @TestApp.path('/sessioncheck')
+    class SessionCheck:
+        pass
+
+    @TestApp.json(SessionCheck)
+    def session_check(_self, request):
+        return request.browsersession
+        
+
     return TestApp
 
 
@@ -32,6 +49,11 @@ def app(test_app_class):
 
     app = test_app_class()
     return app
+
+
+@fixture(scope='session')
+def client(app):
+    return Client(app)
 
 
 @fixture
