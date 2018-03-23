@@ -140,19 +140,11 @@ class SessionInterface(object):
         class Session(dict, SessionMixin):
             pass
 
-    If :meth:`open_session` returns ``None`` Flask will call into
+    If :meth:`open_session` returns ``None`` the interface will call into
     :meth:`make_null_session` to create a session that acts as replacement
     if the session support cannot work because some requirement is not
     fulfilled.  The default :class:`NullSession` class that is created
     will complain that the secret key was not set.
-
-    To replace the session interface on an application all you have to do
-    is to assign :attr:`flask.Flask.session_interface`::
-
-        app = Flask(__name__)
-        app.session_interface = MySessionInterface()
-
-    .. versionadded:: 0.8
     """
 
     #: :meth:`make_null_session` will look here for the class that should
@@ -162,10 +154,8 @@ class SessionInterface(object):
     null_session_class = NullSession
 
     #: A flag that indicates if the session interface is pickle based.
-    #: This can be used by Flask extensions to make a decision in regards
-    #: to how to deal with the session object.
-    #:
-    #: .. versionadded:: 0.10
+    #: This can be used by to make a decision in regards to how to deal 
+    #: with the session object.
     pickle_based = False
 
     def make_null_session(self, app):
@@ -192,10 +182,10 @@ class SessionInterface(object):
     def get_cookie_domain(self, app):
         """Returns the domain that should be set for the session cookie.
 
-        Uses ``SESSION_COOKIE_DOMAIN`` if it is configured, otherwise
-        falls back to detecting the domain based on ``SERVER_NAME``.
+        Uses ``browsersession.cookie_domain`` if it is configured, otherwise
+        falls back to detecting the domain based on ``app.server_name``.
 
-        Once detected (or if not set at all), ``SESSION_COOKIE_DOMAIN`` is
+        Once detected (or if not set at all), ``browsersession.cookie_domain`` is
         updated to avoid re-running the logic.
         """
         rv = app.settings.browsersession.cookie_domain
@@ -244,22 +234,22 @@ class SessionInterface(object):
 
     def get_cookie_path(self, app):
         """Returns the path for which the cookie should be valid.  The
-        default implementation uses the value from the ``SESSION_COOKIE_PATH``
-        config var if it's set, and falls back to ``APPLICATION_ROOT`` or
+        default implementation uses the value from the ``browsersession.cookie_path``
+        config var if it's set, and falls back to ``app.root`` or
         uses ``/`` if it's ``None``.
         """
         return app.settings.browsersession.cookie_path or app.settings.app.root
 
     def get_cookie_httponly(self, app):
         """Returns True if the session cookie should be httponly.  This
-        currently just returns the value of the ``SESSION_COOKIE_HTTPONLY``
+        currently just returns the value of the ``browsersession.cookie_httponly``
         config var.
         """
         return app.settings.browsersession.cookie_httponly
 
     def get_cookie_secure(self, app):
         """Returns True if the cookie should be secure.  This currently
-        just returns the value of the ``SESSION_COOKIE_SECURE`` setting.
+        just returns the value of the ``browsersession.cookie_secure`` setting.
         """
         return app.settings.browsersession.cookie_secure
 
@@ -276,12 +266,10 @@ class SessionInterface(object):
         """Used by session backends to determine if a ``Set-Cookie`` header
         should be set for this session cookie for this response. If the session
         has been modified, the cookie is set. If the session is permanent and
-        the ``SESSION_REFRESH_EACH_REQUEST`` config is true, the cookie is
+        the ``browsersession.refresh_each_request`` config is true, the cookie is
         always set.
 
         This check is usually skipped if the session was deleted.
-
-        .. versionadded:: 0.11
         """
 
         return session.modified or (
