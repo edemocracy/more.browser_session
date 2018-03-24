@@ -1,2 +1,2 @@
-more.browsersession
-===================
+more.browser_session
+====================

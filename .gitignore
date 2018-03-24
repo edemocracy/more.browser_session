@@ -6,6 +6,6 @@
 *.pot
 *.mo
 .babelcompiled
-more.browsersession.egg-info/
+more.browser_session.egg-info/
 .cache/
 .eggs/

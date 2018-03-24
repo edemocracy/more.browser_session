@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    more.browsersession.sessions
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    more.browser_session.sessions
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Implements cookie based sessions based on itsdangerous.
     Based on the sessions flask.sessions module.
@@ -11,13 +11,17 @@
     :license: BSD, see LICENSE for more details.
 """
 import hashlib
+import logging
 import socket
 import warnings
 from collections import MutableMapping
 from datetime import datetime
 
-from itsdangerous import BadSignature, URLSafeTimedSerializer
+from itsdangerous import BadSignature, BadPayload, URLSafeTimedSerializer, TimedSerializer
 from werkzeug.datastructures import CallbackDict
+
+
+logg = logging.getLogger(__name__)
 
 
 def is_ip(value):
@@ -182,13 +186,13 @@ class SessionInterface(object):
     def get_cookie_domain(self, app):
         """Returns the domain that should be set for the session cookie.
 
-        Uses ``browsersession.cookie_domain`` if it is configured, otherwise
+        Uses ``browser_session.cookie_domain`` if it is configured, otherwise
         falls back to detecting the domain based on ``app.server_name``.
 
-        Once detected (or if not set at all), ``browsersession.cookie_domain`` is
+        Once detected (or if not set at all), ``browser_session.cookie_domain`` is
         updated to avoid re-running the logic.
         """
-        rv = app.settings.browsersession.cookie_domain
+        rv = app.settings.browser_session.cookie_domain
 
         # set explicitly, or cached from SERVER_NAME detection
         # if False, return None
@@ -234,24 +238,24 @@ class SessionInterface(object):
 
     def get_cookie_path(self, app):
         """Returns the path for which the cookie should be valid.  The
-        default implementation uses the value from the ``browsersession.cookie_path``
+        default implementation uses the value from the ``browser_session.cookie_path``
         config var if it's set, and falls back to ``app.root`` or
         uses ``/`` if it's ``None``.
         """
-        return app.settings.browsersession.cookie_path or app.settings.app.root
+        return app.settings.browser_session.cookie_path or app.settings.app.root
 
     def get_cookie_httponly(self, app):
         """Returns True if the session cookie should be httponly.  This
-        currently just returns the value of the ``browsersession.cookie_httponly``
+        currently just returns the value of the ``browser_session.cookie_httponly``
         config var.
         """
-        return app.settings.browsersession.cookie_httponly
+        return app.settings.browser_session.cookie_httponly
 
     def get_cookie_secure(self, app):
         """Returns True if the cookie should be secure.  This currently
-        just returns the value of the ``browsersession.cookie_secure`` setting.
+        just returns the value of the ``browser_session.cookie_secure`` setting.
         """
-        return app.settings.browsersession.cookie_secure
+        return app.settings.browser_session.cookie_secure
 
     def get_expiration_time(self, app, session):
         """A helper method that returns an expiration date for the session
@@ -260,20 +264,20 @@ class SessionInterface(object):
         lifetime configured on the application.
         """
         if session.permanent:
-            return datetime.utcnow() + app.settings.browsersession.permanent_lifetime
+            return datetime.utcnow() + app.settings.browser_session.permanent_lifetime
 
     def should_set_cookie(self, app, session):
         """Used by session backends to determine if a ``Set-Cookie`` header
         should be set for this session cookie for this response. If the session
         has been modified, the cookie is set. If the session is permanent and
-        the ``browsersession.refresh_each_request`` config is true, the cookie is
+        the ``browser_session.refresh_each_request`` config is true, the cookie is
         always set.
 
         This check is usually skipped if the session was deleted.
         """
 
         return session.modified or (
-            session.permanent and app.settings.browsersession.refresh_each_request
+            session.permanent and app.settings.browser_session.refresh_each_request
         )
 
     def open_session(self, app, request):
@@ -305,37 +309,44 @@ class SecureCookieSessionInterface(SessionInterface):
     #: the name of the itsdangerous supported key derivation.  The default
     #: is hmac.
     key_derivation = 'hmac'
-    #: A python serializer for the payload.  The default is a compact
+    #: A python serializer for the payload.  The default is o compact
     #: JSON derived serializer with support for some extra Python types
     #: such as datetime objects or tuples.
     session_class = SecureCookieSession
 
+    #: itsdangerous serializer class to use, default is URLSafeTimedSerializer
+    serializer_class = URLSafeTimedSerializer
+
     
     def secret_key(self, app):
         try:
-            return app.settings.browsersession.secret_key
+            return app.settings.browser_session.secret_key
         except AttributeError:
-            raise Exception('no secret key set (browsersettings.secret_key), cannot use secure sessions!')
+            raise Exception('no secret key set (browser_session.secret_key), cannot use secure sessions!')
 
     def get_signing_serializer(self, app):
         signer_kwargs = dict(
             key_derivation=self.key_derivation,
             digest_method=self.digest_method
         )
-        return URLSafeTimedSerializer(self.secret_key(app), salt=self.salt, signer_kwargs=signer_kwargs)
+        return self.serializer_class(self.secret_key(app), salt=self.salt, signer_kwargs=signer_kwargs)
 
     def open_session(self, app, request):
         s = self.get_signing_serializer(app)
         if s is None:
             return None
-        val = request.cookies.get(app.settings.browsersession.cookie_name)
+        val = request.cookies.get(app.settings.browser_session.cookie_name)
         if not val:
             return self.session_class()
-        max_age = app.settings.browsersession.permanent_lifetime
+        max_age = app.settings.browser_session.permanent_lifetime
         try:
             data = s.loads(val, max_age=max_age)
             return self.session_class(data)
         except BadSignature:
+            logg.warn('bad session cookie signature, is someone attacking us?')
+            return self.session_class()
+        except BadPayload:
+            logg.info('bad session cookie payload from client, ignoring')
             return self.session_class()
 
     def save_session(self, app, session, response):
@@ -347,7 +358,7 @@ class SecureCookieSessionInterface(SessionInterface):
         if not session:
             if session.modified:
                 response.delete_cookie(
-                    app.settings.browsersession.cookie_domain,
+                    app.settings.browser_session.cookie_domain,
                     domain=domain,
                     path=path
                 )
@@ -366,7 +377,7 @@ class SecureCookieSessionInterface(SessionInterface):
         expires = self.get_expiration_time(app, session)
         val = self.get_signing_serializer(app).dumps(dict(session))
         response.set_cookie(
-            app.settings.browsersession.cookie_name,
+            app.settings.browser_session.cookie_name,
             val,
             path=path,
             domain=domain,

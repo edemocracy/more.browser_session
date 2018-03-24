@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from more.browsersession.sessions import SecureCookieSession
+from more.browser_session.sessions import SecureCookieSession
 
 
 def test_open_session(app, request, session_interface):

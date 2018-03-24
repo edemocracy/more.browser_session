@@ -3,13 +3,13 @@ from pytest import fixture
 import webob
 from webtest import TestApp as Client
 
-from more.browsersession.app import BrowserSessionApp
-from more.browsersession.sessions import SecureCookieSessionInterface
+from more.browser_session.app import BrowserSessionApp
+from more.browser_session.sessions import SecureCookieSessionInterface
 
 
 
 SETTINGS = {
-    'browsersession': {
+    'browser_session': {
         'secret_key': 'test'
     }
 }
@@ -27,7 +27,7 @@ def test_app_class():
 
     @TestApp.view(SessionAdd)
     def session_add(_self, request):
-        request.browsersession['test'] = 'value'
+        request.browser_session['test'] = 'value'
 
     @TestApp.path('/sessioncheck')
     class SessionCheck:
@@ -35,7 +35,7 @@ def test_app_class():
 
     @TestApp.json(SessionCheck)
     def session_check(_self, request):
-        return request.browsersession
+        return request.browser_session
         
 
     return TestApp
