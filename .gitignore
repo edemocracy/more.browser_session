@@ -9,3 +9,4 @@
 more.browser_session.egg-info/
 .cache/
 .eggs/
+.pytest_cache/
