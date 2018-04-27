@@ -32,7 +32,7 @@ def get_browser_session_settings():
     }
 
 
-@BrowserSessionApp.tween_factory()
+@BrowserSessionApp.tween_factory(over=morepath.core.poisoned_host_header_protection_tween_factory)
 def browser_session_tween_factory(app, handler):
     def browser_session_tween(request):
         session_interface = app.browser_session_interface
