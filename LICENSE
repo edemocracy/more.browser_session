@@ -1,6 +1,6 @@
 Copyright (c) 2018 by Tobias dpausp
 
-Parts taken from Flask, original copyright:
+Parts of the library are taken from Flask, original copyright:
 
 Copyright (c) 2015 by Armin Ronacher and contributors.  See AUTHORS
 for more details.
