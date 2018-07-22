@@ -236,6 +236,11 @@ class SessionInterface(object):
 
         return rv
 
+    def get_cookie_name(self, app):
+        """Returns the name of the cookie. The default value is 'session'.
+        """
+        return app.settings.browser_session.cookie_name
+
     def get_cookie_path(self, app):
         """Returns the path for which the cookie should be valid.  The
         default implementation uses the value from the ``browser_session.cookie_path``
@@ -335,7 +340,7 @@ class SecureCookieSessionInterface(SessionInterface):
         s = self.get_signing_serializer(app)
         if s is None:
             return None
-        val = request.cookies.get(app.settings.browser_session.cookie_name)
+        val = request.cookies.get(self.get_cookie_name(app))
         if not val:
             return self.session_class()
         max_age = app.settings.browser_session.permanent_lifetime
@@ -350,6 +355,7 @@ class SecureCookieSessionInterface(SessionInterface):
             return self.session_class()
 
     def save_session(self, app, session, response):
+        name = self.get_cookie_name(app)
         domain = self.get_cookie_domain(app)
         path = self.get_cookie_path(app)
 
@@ -357,11 +363,7 @@ class SecureCookieSessionInterface(SessionInterface):
         # If the session is empty, return without setting the cookie.
         if not session:
             if session.modified:
-                response.delete_cookie(
-                    app.settings.browser_session.cookie_domain,
-                    domain=domain,
-                    path=path
-                )
+                response.delete_cookie(name=name, domain=domain, path=path)
 
             return
 
@@ -377,7 +379,7 @@ class SecureCookieSessionInterface(SessionInterface):
         expires = self.get_expiration_time(app, session)
         val = self.get_signing_serializer(app).dumps(dict(session))
         response.set_cookie(
-            app.settings.browser_session.cookie_name,
+            name,
             val,
             path=path,
             domain=domain,
