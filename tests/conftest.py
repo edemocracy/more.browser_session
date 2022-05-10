@@ -57,7 +57,7 @@ def client(app):
 
 
 @fixture
-def request(app):
+def http_request(app):
     return app.test_request()
 
 

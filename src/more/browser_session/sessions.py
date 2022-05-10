@@ -14,7 +14,7 @@ import hashlib
 import logging
 import socket
 import warnings
-from collections import MutableMapping
+from collections.abc import MutableMapping
 from datetime import datetime
 
 from itsdangerous import BadSignature, BadPayload, URLSafeTimedSerializer, TimedSerializer
