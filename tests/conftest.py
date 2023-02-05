@@ -43,7 +43,6 @@ def test_app_class():
 
 @fixture(scope='session')
 def app(test_app_class):
-    morepath.autoscan()
     test_app_class.init_settings(SETTINGS)
     test_app_class.commit()
 

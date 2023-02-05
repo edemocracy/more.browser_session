@@ -12,3 +12,8 @@ more.browser_session.egg-info/
 .pytest_cache/
 build/
 dist/
+
+# Devenv
+.devenv*
+devenv.local.nix
+
